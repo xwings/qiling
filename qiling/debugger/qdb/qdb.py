@@ -643,7 +643,7 @@ class QlQdb(cmd.Cmd, QlDebugger):
         run python code
         """
 
-        # allowing arbitrary shell commands is a huge secure problem. until it gets
+        # allowing arbitrary shell commands is a huge security problem. until it gets
         # removed, block shell command in scripts for security reasons
         if self._script:
             qdb_print(QDB_MSG.ERROR, 'shell command is not allowed on script')

@@ -38,7 +38,7 @@ RARROW = '\u2192'
 RULER = '\u2500'
 
 CURSOR   = '\u25ba'  # current instruction cursor
-GOING_DN = '\u2ba6'  # branching downard to a higher address
+GOING_DN = '\u2ba6'  # branching downward to a higher address
 GOING_UP = '\u2ba4'  # branching upward to a lower address
 
 
