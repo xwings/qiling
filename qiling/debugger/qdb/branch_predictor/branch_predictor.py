@@ -6,7 +6,7 @@
 from abc import abstractmethod
 from typing import ClassVar, NamedTuple, Optional
 
-from capstone import CS_GRP_JUMP, CS_GRP_CALL, CS_GRP_RET
+from capstone import CS_GRP_JUMP, CS_GRP_CALL, CS_GRP_RET, CS_GRP_BRANCH_RELATIVE
 
 from ..context import Context
 from ..misc import InvalidInsn
@@ -61,7 +61,8 @@ class BranchPredictor(Context):
         branching = (
             CS_GRP_JUMP,
             CS_GRP_CALL,
-            CS_GRP_RET
+            CS_GRP_RET,
+            CS_GRP_BRANCH_RELATIVE
         )
 
         return any(grp in branching for grp in insn.groups)
