@@ -476,12 +476,7 @@ class QlQdb(Cmd, QlDebugger):
             if has_member:
                 setattr(obj, member, orig)
 
-    def do_show_args(self, args: str):
-        """
-        show arguments of a function call
-        default argc is 2 since we don't know the function definition
-        """
-
+    def __show_args(self, args: str):
         argc, *_ = args.split() if args else ('',)
         argc = try_read_int(argc)
 
@@ -550,45 +545,111 @@ class QlQdb(Cmd, QlDebugger):
 
             qdb_print(QDB_MSG.INFO, f'arg{i}: {a:#0{nibbles + 2}x}{f" {RARROW} {deref_str}" if deref_str else ""}')
 
-    def do_show(self, args: str) -> None:
-        """
-        show some runtime information
-        """
+    def __show_breakpoints(self, args: str):
+        if self.bp_list:
+            qdb_print(QDB_MSG.INFO, f'{"id":2s} {"address":10s} {"enabled"}')
 
-        keyword, *_ = args.split() if args else ('',)
+            for addr, bp in self.bp_list.items():
+                if not bp.temp:
+                    qdb_print(QDB_MSG.INFO, f"{bp.index:2d} {addr:#010x} {bp.enabled}")
 
-        qdb_print(QDB_MSG.INFO, f"Entry point: {self.ql.loader.entry_point:#010x}")
+        else:
+            qdb_print(QDB_MSG.INFO, 'No breakpoints')
 
-        if hasattr(self.ql.loader, 'elf_entry'):
-            qdb_print(QDB_MSG.INFO, f"ELF entry point: {self.ql.loader.elf_entry:#010x}")
-
+    def __show_mem(self, kw: str):
         info_lines = iter(self.ql.mem.get_formatted_mapinfo())
 
         # print filed name first
         qdb_print(QDB_MSG.INFO, next(info_lines))
 
         # keyword filtering
-        if keyword:
-            lines = (line for line in info_lines if keyword in line)
-        else:
-            lines = info_lines
+        lines = (line for line in info_lines if kw in line) if kw else info_lines
 
         for line in lines:
             qdb_print(QDB_MSG.INFO, line)
 
-        qdb_print(QDB_MSG.INFO, "Breakpoints:")
+    def __show_marks(self, args: str):
+        """Show marked symbols.
+        """
 
-        for addr, bp in self.bp_list.items():
-            if not bp.temp:
-                qdb_print(QDB_MSG.INFO, f"  {addr:#010x}")
+        if self.marker.mark_list:
+            qdb_print(QDB_MSG.INFO, f'{"symbol":10s} {"address":10s}')
 
-        qdb_print(QDB_MSG.INFO, "Marked symbols:")
+            for key, addr in self.marker.mark_list:
+                qdb_print(QDB_MSG.INFO, f'{key:10s} {addr:#010x}')
 
-        for key, addr in self.marker.mark_list:
-            qdb_print(QDB_MSG.INFO, f"  {key:10s}: {addr:#010x}")
+        else:
+            qdb_print(QDB_MSG.INFO, 'No marked symbols')
 
+    def __show_snapshot(self, args: str):
         if self.rr:
-            qdb_print(QDB_MSG.INFO, f"Snapshots: {len(self.rr.layers)}")
+            if self.rr.layers:
+                recent = self.rr.layers[-1]
+
+                # regs diff
+                if recent.reg:
+                    for reg, val in recent.reg.items():
+                        qdb_print(QDB_MSG.INFO, f'{reg:6s}: {val:08x}')
+
+                else:
+                    qdb_print(QDB_MSG.INFO, 'Regs identical')
+
+                qdb_print(QDB_MSG.INFO, '')
+
+                # system regs diff
+                if recent.xreg:
+                    for reg, val in recent.xreg.items():
+                        qdb_print(QDB_MSG.INFO, f'{reg:8s}: {val:08x}')
+
+                else:
+                    qdb_print(QDB_MSG.INFO, 'System regs identical')
+
+                qdb_print(QDB_MSG.INFO, '')
+
+                # ram diff
+                if recent.ram:
+                    for rng, (opcode, diff) in sorted(recent.ram.items()):
+                        lbound, ubound = rng
+                        perms, label, data = diff
+
+                        qdb_print(QDB_MSG.INFO, f'{opcode.name} {lbound:010x} - {ubound:010x} {perms:03b} {label:24s} ~{len(data)}')
+
+                else:
+                    qdb_print(QDB_MSG.INFO, 'Memory identical')
+
+            else:
+                qdb_print(QDB_MSG.INFO, 'No snapshots')
+
+        else:
+            qdb_print(QDB_MSG.INFO, 'Snapshots were not enabled for this session')
+
+    def __show_entry(self, args: str):
+        qdb_print(QDB_MSG.INFO, f'{"Entry point":16s}: {self.ql.loader.entry_point:#010x}')
+
+        if hasattr(self.ql.loader, 'elf_entry'):
+            qdb_print(QDB_MSG.INFO, f'{"ELF entry point":16s}: {self.ql.loader.elf_entry:#010x}')
+
+    def do_show(self, args: str) -> None:
+        """
+        show some runtime information
+        """
+
+        subcmd, *a = args.split(maxsplit=1) if args else ('',)
+
+        if not a:
+            a = ['']
+
+        handlers = {
+            'args':        self.__show_args,
+            'breakpoints': self.__show_breakpoints,
+            'mem':         self.__show_mem,
+            'marks':       self.__show_marks,
+            'snapshot':    self.__show_snapshot,
+            'entry':       self.__show_entry
+        }
+
+        if subcmd in handlers:
+            handlers[subcmd](*a)
 
     def do_script(self, filename: str) -> None:
         """
@@ -642,7 +703,6 @@ class QlQdb(Cmd, QlDebugger):
     do_r = do_run
     do_s = do_step_in
     do_n = do_step_over
-    do_a = do_show_args
     do_j = do_jump
     do_m = do_mark
     do_q = do_quit

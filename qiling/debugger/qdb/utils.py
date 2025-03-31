@@ -227,11 +227,11 @@ class State:
             ram_diff[rng] = (MemDiff.MOD, (perms, label0, data_diff))
 
         # <DEBUG>
-        for rng, (opcode, diff) in sorted(ram_diff.items()):
-            lbound, ubound = rng
-            perms, label, data = diff
-
-            print(f'{opcode.name} {lbound:010x} - {ubound:010x} {perms:03b} {label:24s} ~{len(data)}')
+        # for rng, (opcode, diff) in sorted(ram_diff.items()):
+        #     lbound, ubound = rng
+        #     perms, label, data = diff
+        #
+        #     print(f'{opcode.name} {lbound:010x} - {ubound:010x} {perms:03b} {label:24s} ~{len(data)}')
         # </DEBUG>
 
         return ram_diff

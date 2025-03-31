@@ -14,13 +14,16 @@ x/8xw $sp
 c
 
 # show argument passed to puts
-show_args 1
+show args 1
 
 # show instructions passed call till end of function
 x/5i ($pc + 4)
 
 # step over call to puts
 n
+
+# show snapshot diff
+show snapshot
 
 # step backwards to start of main
 p

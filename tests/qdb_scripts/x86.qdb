@@ -14,13 +14,16 @@ x/8xw $esp
 c
 
 # show argument passed to printf
-show_args 1
+show args 1
 
 # show instructions passed call till end of function
 x/8i ($eip + 5)
 
 # step over call to printf
 n
+
+# show snapshot diff
+show snapshot
 
 # step backwards to start of main
 p
