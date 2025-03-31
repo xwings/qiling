@@ -82,7 +82,7 @@ class QlQdb(Cmd, QlDebugger):
         super().__init__()
 
         # filter out entry_point of loader if presented
-        self.dbg_hook(list(filter(lambda d: int(d, 0) != self.ql.loader.entry_point, init_hook)))
+        self.dbg_hook([addr for addr in init_hook if int(addr, 0) != self.ql.loader.entry_point])
 
     def run_qdb_script(self, filename: str) -> None:
         with open(filename, 'r', encoding='latin') as fd:
@@ -227,7 +227,7 @@ class QlQdb(Cmd, QlDebugger):
         qdb_print(QDB_MSG.INFO, f'stepping {steps} steps from {self.cur_addr:#x}')
 
         # make sure to include delay slot when branching in mips
-        if self.ql.arch.type is QL_ARCH.MIPS:
+        if self.ql.arch.type is QL_ARCH.MIPS and self.predictor.is_branch():
             prophecy = self.predictor.predict()
 
             if prophecy.going:
@@ -576,8 +576,16 @@ class QlQdb(Cmd, QlDebugger):
         for line in lines:
             qdb_print(QDB_MSG.INFO, line)
 
-        qdb_print(QDB_MSG.INFO, f"Breakpoints: {[f'{addr:#010x}' for addr, bp in self.bp_list.items() if not bp.temp]}")
-        qdb_print(QDB_MSG.INFO, f"Marked symbols: {[{key: f'{addr:#010x}'} for key, addr in self.marker.mark_list]}")
+        qdb_print(QDB_MSG.INFO, "Breakpoints:")
+
+        for addr, bp in self.bp_list.items():
+            if not bp.temp:
+                qdb_print(QDB_MSG.INFO, f"  {addr:#010x}")
+
+        qdb_print(QDB_MSG.INFO, "Marked symbols:")
+
+        for key, addr in self.marker.mark_list:
+            qdb_print(QDB_MSG.INFO, f"  {key:10s}: {addr:#010x}")
 
         if self.rr:
             qdb_print(QDB_MSG.INFO, f"Snapshots: {len(self.rr.layers)}")
