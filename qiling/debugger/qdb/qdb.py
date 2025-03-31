@@ -5,10 +5,10 @@
 
 from __future__ import annotations
 
-import cmd
 import sys
 
-from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Tuple, List, Union
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Union
+from cmd import Cmd
 from contextlib import contextmanager
 
 from qiling.const import QL_OS, QL_ARCH, QL_VERBOSE
@@ -56,7 +56,7 @@ def liveness_check(func: Callable) -> Callable[..., None]:
     return inner
 
 
-class QlQdb(cmd.Cmd, QlDebugger):
+class QlQdb(Cmd, QlDebugger):
     """
     The built-in debugger of Qiling Framework
     """
@@ -86,18 +86,7 @@ class QlQdb(cmd.Cmd, QlDebugger):
 
     def run_qdb_script(self, filename: str) -> None:
         with open(filename, 'r', encoding='latin') as fd:
-            for line in fd.readlines():
-                command, arg, _ = self.parseline(line)
-
-                if command is None:
-                    continue
-
-                func = getattr(self, f"do_{command}")
-
-                if arg:
-                    func(arg)
-                else:
-                    func()
+            self.cmdqueue = fd.readlines()
 
     def dbg_hook(self, init_hook: List[str]):
         """
@@ -156,8 +145,8 @@ class QlQdb(cmd.Cmd, QlDebugger):
 
         if self._script:
             self.run_qdb_script(self._script)
-        else:
-            self.interactive()
+
+        self.cmdloop()
 
     @property
     def cur_addr(self) -> int:
@@ -194,41 +183,19 @@ class QlQdb(cmd.Cmd, QlDebugger):
         yield self
         self.ql.restore(saved_states)
 
-    def parseline(self, line: str) -> Tuple[Optional[str], Optional[str], str]:
-        """
-        Parse the line into a command name and a string containing
-        the arguments.  Returns a tuple containing (command, args, line).
-        'command' and 'args' may be None if the line couldn't be parsed.
-        """
+    def default(self, line: str):
+        # if this is a comment line, ignore it
+        if line.startswith('#'):
+            return
 
-        # remove potential leading or trailing spaces
-        line = line.strip()
+        super().default(line)
 
-        # skip commented and empty lines
-        if not line or line.startswith("#"):
-            return None, None, line
+    def emptyline(self) -> bool:
+        # when executing a script, ignore empty lines
+        if self._script:
+            return False
 
-        elif line.startswith('?'):
-            line = 'help ' + line[1:]
-
-        elif line.startswith('!'):
-            if hasattr(self, 'do_shell'):
-                line = 'shell ' + line[1:]
-            else:
-                return None, None, line
-
-        i = 0
-        while i < len(line) and line[i] in self.identchars:
-            i += 1
-
-        return line[:i], line[i:], line
-
-    def interactive(self) -> None:
-        """
-        initial an interactive interface
-        """
-
-        return self.cmdloop()
+        return super().emptyline()
 
     def run(self, *args) -> None:
         """
@@ -237,20 +204,7 @@ class QlQdb(cmd.Cmd, QlDebugger):
 
         self._run()
 
-    def emptyline(self, *args) -> None:
-        """
-        repeat last command
-        """
-
-        if self.lastcmd:
-            command, *arguments = self.lastcmd.split()
-
-            lastcmd = getattr(self, f'do_{command}', None)
-
-            if lastcmd:
-                lastcmd(*arguments)
-
-    def do_run(self, *args: str) -> None:
+    def do_run(self, args: str) -> None:
         """
         launch qiling instance
         """
