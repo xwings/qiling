@@ -589,6 +589,8 @@ class QlQdb(Cmd, QlDebugger):
         """
 
         if filename:
+            self._script = filename
+
             self.run_qdb_script(filename)
         else:
             qdb_print(QDB_MSG.ERROR, "parameter filename must be specified")
