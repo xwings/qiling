@@ -93,7 +93,7 @@ class Marker:
 
         sym = sym or self.gen_sym_name()
 
-        if sym in self.mark_list:
+        if sym in self._mark_list:
             return ''
 
         self._mark_list[sym] = loc
