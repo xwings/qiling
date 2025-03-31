@@ -214,11 +214,11 @@ class QlQdb(Cmd, QlDebugger):
     @SnapshotManager.snapshot
     @save_regs
     @liveness_check
-    def do_step_in(self, *args: str) -> None:
+    def do_step_in(self, args: str) -> None:
         """Go to next instruction, stepping into function calls.
         """
 
-        steps, *_ = args or ('',)
+        steps, *_ = args.split() if args else ('',)
         steps = try_read_int(steps)
 
         if steps is None:
@@ -239,7 +239,7 @@ class QlQdb(Cmd, QlDebugger):
     @SnapshotManager.snapshot
     @save_regs
     @liveness_check
-    def do_step_over(self, *args: str) -> None:
+    def do_step_over(self, args: str) -> None:
         """Go to next instruction, stepping over function calls.
         """
 
@@ -257,12 +257,12 @@ class QlQdb(Cmd, QlDebugger):
     @SnapshotManager.snapshot
     @save_regs
     @liveness_check
-    def do_continue(self, *args: str) -> None:
+    def do_continue(self, args: str) -> None:
         """Continue execution from specified address, or from current one if
         not specified.
         """
 
-        address, *_ = args or ('',)
+        address, *_ = args.split() if args else ('',)
         address = try_read_int(address)
 
         if address is None:
@@ -272,7 +272,7 @@ class QlQdb(Cmd, QlDebugger):
 
         self._run(address)
 
-    def do_backward(self, *args: str) -> None:
+    def do_backward(self, args: str) -> None:
         """Step backwards to the previous location.
 
         This operation requires the rr option to be enabled and having a progress
@@ -317,11 +317,11 @@ class QlQdb(Cmd, QlDebugger):
 
         del self.bp_list[bp.addr]
 
-    def do_breakpoint(self, *args: str) -> None:
+    def do_breakpoint(self, args: str) -> None:
         """Set a breakpoint on a specific address, or current one if not specified.
         """
 
-        address, *_ = args
+        address, *_ = args.split() if args else ('',)
         address = try_read_int(address)
 
         if address is None:
@@ -331,11 +331,11 @@ class QlQdb(Cmd, QlDebugger):
 
         qdb_print(QDB_MSG.INFO, f"breakpoint set at {address:#010x}")
 
-    def do_disassemble(self, *args: str) -> None:
+    def do_disassemble(self, args: str) -> None:
         """Disassemble a few instructions starting from specified address.
         """
 
-        address, *_ = args
+        address, *_ = args.split() if args else ('',)
         address = try_read_int(address)
 
         if address is None:
@@ -343,7 +343,7 @@ class QlQdb(Cmd, QlDebugger):
 
         self.do_examine(f'x/{self.render.disasm_num * 2}i {address}')
 
-    def do_examine(self, line: str) -> None:
+    def do_examine(self, args: str) -> None:
         """Examine memory.
 
         Usage: x/nfu target (all arguments are optional)
@@ -354,24 +354,24 @@ class QlQdb(Cmd, QlDebugger):
         """
 
         try:
-            self.helper.handle_examine(line)
+            self.helper.handle_examine(args)
         except (KeyError, ValueError, SyntaxError) as ex:
             qdb_print(QDB_MSG.ERROR, ex)
 
-    def do_set(self, line: str) -> None:
+    def do_set(self, args: str) -> None:
         """
         set register value of current context
         """
         # set $a = b
 
         try:
-            reg, value = self.helper.handle_set(line)
+            reg, value = self.helper.handle_set(args)
         except (KeyError, ValueError, SyntaxError) as ex:
             qdb_print(QDB_MSG.ERROR, ex)
         else:
             qdb_print(QDB_MSG.INFO, f"{reg} set to {value:#010x}")
 
-    def do_start(self, *args: str) -> None:
+    def do_start(self, args: str) -> None:
         """
         restore qiling instance context to initial state
         """
@@ -389,12 +389,12 @@ class QlQdb(Cmd, QlDebugger):
         self.render.context_stack()
         self.render.context_asm()
 
-    def do_jump(self, *args: str) -> None:
+    def do_jump(self, args: str) -> None:
         """
         seek to where ever valid location you want
         """
 
-        loc, *_ = args
+        loc, *_ = args.split() if args else ('',)
         addr = self.marker.get_address(loc)
 
         if addr is None:
@@ -414,22 +414,23 @@ class QlQdb(Cmd, QlDebugger):
         self.cur_addr = addr
         self.do_context()
 
-    def do_mark(self, *args: str):
+    def do_mark(self, args: str):
         """
         mark a user specified address as a symbol
         """
 
-        if not args:
+        elems = args.split() if args else []
+
+        if not elems:
             loc = self.cur_addr
             sym = self.marker.mark(loc)
 
-        elif len(args) == 1:
-            addr, *_ = args
-            loc = try_read_int(addr)
+        elif len(elems) == 1:
+            loc = try_read_int(elems[0])
 
             if loc is None:
                 loc = self.cur_addr
-                sym = args[0]
+                sym = elems[0]
 
                 if not self.marker.mark(loc, sym):
                     qdb_print(QDB_MSG.ERROR, f"duplicated symbol name: {sym} at address: {loc:#010x}")
@@ -438,8 +439,8 @@ class QlQdb(Cmd, QlDebugger):
             else:
                 sym = self.marker.mark(loc)
 
-        elif len(args) == 2:
-            sym, addr = args
+        elif len(elems) == 2:
+            sym, addr = elems
             loc = try_read_int(addr)
 
             if loc is None:
@@ -475,13 +476,13 @@ class QlQdb(Cmd, QlDebugger):
             if has_member:
                 setattr(obj, member, orig)
 
-    def do_show_args(self, *args: str):
+    def do_show_args(self, args: str):
         """
         show arguments of a function call
         default argc is 2 since we don't know the function definition
         """
 
-        argc, *_ = args or ('',)
+        argc, *_ = args.split() if args else ('',)
         argc = try_read_int(argc)
 
         if argc is None:
@@ -549,12 +550,12 @@ class QlQdb(Cmd, QlDebugger):
 
             qdb_print(QDB_MSG.INFO, f'arg{i}: {a:#0{nibbles + 2}x}{f" {RARROW} {deref_str}" if deref_str else ""}')
 
-    def do_show(self, *args: str) -> None:
+    def do_show(self, args: str) -> None:
         """
         show some runtime information
         """
 
-        keyword, *_ = args or ('',)
+        keyword, *_ = args.split() if args else ('',)
 
         qdb_print(QDB_MSG.INFO, f"Entry point: {self.ql.loader.entry_point:#010x}")
 
@@ -592,7 +593,7 @@ class QlQdb(Cmd, QlDebugger):
         else:
             qdb_print(QDB_MSG.ERROR, "parameter filename must be specified")
 
-    def do_shell(self, *command) -> None:
+    def do_shell(self, args: str) -> None:
         """
         run python code
         """
@@ -604,7 +605,7 @@ class QlQdb(Cmd, QlDebugger):
             return
 
         try:
-            print(eval(*command))
+            print(eval(args))
         except:
             qdb_print(QDB_MSG.ERROR, "something went wrong ...")
 
