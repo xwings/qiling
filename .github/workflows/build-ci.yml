@@ -13,9 +13,9 @@ jobs:
         os: [windows-latest, ubuntu-22.04]
         python-version: ["3.11"]
         include:
-          - os: ubuntu-22.04
-            python-version: 3.11
-            #container: Docker
+          - #os: ubuntu-22.04
+            #python-version: 3.11
+            container: Docker
 
     steps:
       - uses: actions/checkout@v3
