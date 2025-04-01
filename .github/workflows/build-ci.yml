@@ -11,11 +11,11 @@ jobs:
       matrix:
         #os: [windows-2019, macos-10.15, ubuntu-18.04, ubuntu-20.04]
         os: [windows-latest, ubuntu-22.04]
-        python-version: ["3.11"]
+        python-version: ["3.9", "3.11"]
         include:
           - os: ubuntu-22.04
             python-version: 3.11
-            container: Docker
+            #container: Docker
 
     steps:
       - uses: actions/checkout@v3
@@ -74,7 +74,7 @@ jobs:
           cd ../../../../
           pip3 install -e .
 
-          if [ ${{ matrix.contrainer }} == ${{ matrix.os }} ]; then
+          if [ ${{ matrix.contrainer }} != "" ]; then
             docker run -it --rm -v ${GITHUB_WORKSPACE}:/qiling qilingframework/qiling:dev bash -c "cd tests && ./test_onlinux.sh"
           else
             pip3 install poetry
