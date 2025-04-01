@@ -15,7 +15,7 @@ jobs:
         include:
           - os: ubuntu-22.04
             python-version: 3.11
-            #container: Docker
+            container: Docker
 
     steps:
       - uses: actions/checkout@v3
