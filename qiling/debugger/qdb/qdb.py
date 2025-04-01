@@ -476,7 +476,7 @@ class QlQdb(Cmd, QlDebugger):
             if has_member:
                 setattr(obj, member, orig)
 
-    def __show_args(self, args: str):
+    def __info_args(self, args: str):
         argc, *_ = args.split() if args else ('',)
         argc = try_read_int(argc)
 
@@ -545,7 +545,7 @@ class QlQdb(Cmd, QlDebugger):
 
             qdb_print(QDB_MSG.INFO, f'arg{i}: {a:#0{nibbles + 2}x}{f" {RARROW} {deref_str}" if deref_str else ""}')
 
-    def __show_breakpoints(self, args: str):
+    def __info_breakpoints(self, args: str):
         if self.bp_list:
             qdb_print(QDB_MSG.INFO, f'{"id":2s} {"address":10s} {"enabled"}')
 
@@ -556,7 +556,7 @@ class QlQdb(Cmd, QlDebugger):
         else:
             qdb_print(QDB_MSG.INFO, 'No breakpoints')
 
-    def __show_mem(self, kw: str):
+    def __info_mem(self, kw: str):
         info_lines = iter(self.ql.mem.get_formatted_mapinfo())
 
         # print filed name first
@@ -568,7 +568,7 @@ class QlQdb(Cmd, QlDebugger):
         for line in lines:
             qdb_print(QDB_MSG.INFO, line)
 
-    def __show_marks(self, args: str):
+    def __info_marks(self, args: str):
         """Show marked symbols.
         """
 
@@ -581,7 +581,7 @@ class QlQdb(Cmd, QlDebugger):
         else:
             qdb_print(QDB_MSG.INFO, 'No marked symbols')
 
-    def __show_snapshot(self, args: str):
+    def __info_snapshot(self, args: str):
         if self.rr:
             if self.rr.layers:
                 recent = self.rr.layers[-1]
@@ -623,15 +623,14 @@ class QlQdb(Cmd, QlDebugger):
         else:
             qdb_print(QDB_MSG.INFO, 'Snapshots were not enabled for this session')
 
-    def __show_entry(self, args: str):
+    def __info_entry(self, args: str):
         qdb_print(QDB_MSG.INFO, f'{"Entry point":16s}: {self.ql.loader.entry_point:#010x}')
 
         if hasattr(self.ql.loader, 'elf_entry'):
             qdb_print(QDB_MSG.INFO, f'{"ELF entry point":16s}: {self.ql.loader.elf_entry:#010x}')
 
-    def do_show(self, args: str) -> None:
-        """
-        show some runtime information
+    def do_info(self, args: str) -> None:
+        """Provide run-time information.
         """
 
         subcmd, *a = args.split(maxsplit=1) if args else ('',)
@@ -640,16 +639,19 @@ class QlQdb(Cmd, QlDebugger):
             a = ['']
 
         handlers = {
-            'args':        self.__show_args,
-            'breakpoints': self.__show_breakpoints,
-            'mem':         self.__show_mem,
-            'marks':       self.__show_marks,
-            'snapshot':    self.__show_snapshot,
-            'entry':       self.__show_entry
+            'args':        self.__info_args,
+            'breakpoints': self.__info_breakpoints,
+            'mem':         self.__info_mem,
+            'marks':       self.__info_marks,
+            'snapshot':    self.__info_snapshot,
+            'entry':       self.__info_entry
         }
 
         if subcmd in handlers:
             handlers[subcmd](*a)
+
+        else:
+            qdb_print(QDB_MSG.ERROR, f'info subcommands: {list(handlers.keys())}')
 
     def do_script(self, filename: str) -> None:
         """
