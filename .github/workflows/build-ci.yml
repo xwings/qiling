@@ -74,7 +74,6 @@ jobs:
           cd ../../../../
           pip3 install -e .
           cd tests && ./test_onlinux.sh
-          fi
 
     # - name: mac run tests
     #   if: contains(matrix.os, 'macos')
